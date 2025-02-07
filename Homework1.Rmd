@@ -1,0 +1,108 @@
+---
+title: "Time Series Model Bus HW 1"
+author: "Erica Wurster"
+date: "2025-02-07"
+output: html_document
+---
+
+## Introduction
+
+In this assignment, I will import the Typical Industries employee survey data and perform an analysis. I will plot various visuals and scatter plots that show relationships in the data and explain them.
+
+```{r importing_data}
+# Import CSV File
+Typical_Employee_Survey_Data <- read.csv("/Users/user/Desktop/time\ series/Typical_Employee_Survey_Data.csv",header = FALSE)
+
+# The str function will allow me to test if the file was properly imported, and the structure of the data.
+str(Typical_Employee_Survey_Data)
+
+# Defining the column names, as the file currently has none
+names(Typical_Employee_Survey_Data)[1] <- "Age"
+names(Typical_Employee_Survey_Data)[2] <- "Gender"
+names(Typical_Employee_Survey_Data)[3] <- "Job_Satisfaction"
+names(Typical_Employee_Survey_Data)[4] <- "Job_Characteristics"
+names(Typical_Employee_Survey_Data)[5] <- "Years_Worked"
+names(Typical_Employee_Survey_Data)[6] <- "Promotion_Likelihood"
+names(Typical_Employee_Survey_Data)[7] <- "Job_Decisions"
+names(Typical_Employee_Survey_Data)[8] <- "Budget_Decisions"
+names(Typical_Employee_Survey_Data)[9] <- "Proud_Rating"
+names(Typical_Employee_Survey_Data)[10] <- "Turn_Down_Job_Offer"
+names(Typical_Employee_Survey_Data)[11] <- "Work_Relations"
+
+# Print out the 5-point summary and boxplot for all numerical columns (Age, Years_Worked)
+summary(Typical_Employee_Survey_Data$Age)
+boxplot(Typical_Employee_Survey_Data$Age)
+summary(Typical_Employee_Survey_Data$Years_Worked)
+boxplot(Typical_Employee_Survey_Data$Years_Worked)
+
+# Convert the appropriate columns to Factors (Gender, Job_Satisfaction, Job_Characteristics, Promotion_Likelihood, Job_Decisions, Budget_Decisions, Proud_Rating, Turn_Down_Job_Offer, Work_Relations)
+Typical_Employee_Survey_Data$Gender <- factor(Typical_Employee_Survey_Data$Gender, levels = c(1, 2), labels = c("Male", "Female"))
+Typical_Employee_Survey_Data$Job_Satisfaction <- factor(Typical_Employee_Survey_Data$Job_Satisfaction, levels = c(1, 2, 3, 4), labels = c("Very Satisfied", "Moderately Satisfied", "A Little Dissatisfied", "Very Dissatisfied"))
+Typical_Employee_Survey_Data$Job_Characteristics <- factor(Typical_Employee_Survey_Data$Job_Characteristics, levels = c(1, 2, 3, 4, 5), labels = c("High Income", "No Danger of Being Fired", "Flexible Hours", "Opportunities for Advancement", "Enjoying the Work"))
+Typical_Employee_Survey_Data$Promotion_Likelihood <- factor(Typical_Employee_Survey_Data$Promotion_Likelihood, levels = c(1, 2, 3, 4, 5), labels = c("Very Likely", "Likely", "Not Sure", "Unlikely", "Very Unlikely"))
+Typical_Employee_Survey_Data$Job_Decisions <- factor(Typical_Employee_Survey_Data$Job_Decisions, levels = c(1, 2, 3, 4), labels = c("Always", "Much of the Time", "Sometimes", "Never"))
+Typical_Employee_Survey_Data$Budget_Decisions <- factor(Typical_Employee_Survey_Data$Budget_Decisions, levels = c(1, 2), labels = c("Yes", "No"))
+Typical_Employee_Survey_Data$Proud_Rating <- factor(Typical_Employee_Survey_Data$Proud_Rating, levels = c(1, 2, 3, 4), labels = c("Very Proud", "Somewhat Proud", "Indifferent", "Not At All Proud"))
+Typical_Employee_Survey_Data$Turn_Down_Job_Offer <- factor(Typical_Employee_Survey_Data$Turn_Down_Job_Offer, levels = c(1, 2, 3, 4, 5), labels = c("Very Likely", "Likely", "Not Sure", "Unlikely", "Very Unlikely"))
+Typical_Employee_Survey_Data$Work_Relations <- factor(Typical_Employee_Survey_Data$Work_Relations, levels = c(1, 2, 3, 4, 5), labels = c("Very Good", "Good", "So So", "Bad", "Very Bad"))
+
+
+# For Age, a histogram is best as a box plot was already generated above to summarize the data. The histogram displays that while employees of all ages 20-60+ exist, most are between the ages of 30 to 45.
+hist(Typical_Employee_Survey_Data$Age, main = "Histogram of Age", xlab = "Age", col = "red")
+
+# For Gender, a bar plot is appropriate to view the gender distribution of the survey respondents. 20 more males than females answered this survey at Typical Industries.
+barplot(table(Typical_Employee_Survey_Data$Gender), main = "Gender Distribution", xlab = "Gender", ylab = "Frequency", col = c("blue", "pink"))
+
+# For job satisfaction, a bar plot is also appropriate as there were 4 options for survey takers to select. The majority choose Very Satisfied or Moderately Satisfied. This suggests that Typical Industries is a pleasant place to work with happy employees.
+barplot(table(Typical_Employee_Survey_Data$Job_Satisfaction), main = "Job Satisfaction Levels", xlab = "Satisfaction", ylab = "Frequency", col = c("green", "yellow", "orange", "red"))
+
+# For job characteristic selection, a bar plot is also appropriate due to the 5 selection options. Most employees choose Enjoying the Work as the most important factor in a job, followed by high income. More individuals at Typical Industries may forgo a higher salary if it meant enjoying their job.
+barplot(table(Typical_Employee_Survey_Data$Job_Characteristics), main = "Most Important Job Characteristics", xlab = "Job Characteristic", ylab = "Frequency", col = "blue")
+
+# A histogram is most appropriate for years worked as a box plot was already generated above. This displays that the majority of Typical Industries employees have only been with the company for 0-5 years.
+hist(Typical_Employee_Survey_Data$Years_Worked, main = "Years Worked Distribution", xlab = "Years Worked", ylab = "Frequency", col = "blue")
+
+# A bar plot was appropriate for the promotion likelihood response due to the 5 answer choices. Most Typical Industries employees feel that a promotion in the next 5 years is highly unlikely for them, but many still feel that this is either very likely, likely, or unlikely for them. Few are undecided on this issue.
+barplot(table(Typical_Employee_Survey_Data$Promotion_Likelihood), main = "Likelihood of Promotion in the Next 5 Years", xlab = "Likelihood", ylab = "Frequency", col = "blue")
+
+# The bar plot displaying the Typical Industries employees feelings on their ability to participate in job decisions displays that very few feel that they never get to participate in decisions. Most feel that they participate in these decisions "Much of the Time".
+barplot(table(Typical_Employee_Survey_Data$Job_Decisions), main = "Decision Participation", xlab = "Decision Participation", ylab = "Frequency", col = "blue")
+
+# A bar plot displaying Typical Industries employees feeling shows a relatively split result. Still, more employees that they are involved in budgetary decisions involving their job than not.
+barplot(table(Typical_Employee_Survey_Data$Budget_Decisions), main = "Participation in Budgetary Decisions", xlab = "Budget Decision Participation", ylab = "Frequency", col = "blue")
+
+# The bar plot displaying the Typical Industries employees pride in the organization displays that most are "Somewhat Proud" while the second most are "Very Proud". Very few have no pride in the organization.
+barplot(table(Typical_Employee_Survey_Data$Proud_Rating), main = "Pride in the Organization", xlab = "Pride Level", ylab = "Frequency", col = "blue")
+
+# The bar plot displays that most Typical Industries Employees are "Unlikely" or "Very Unlikely" to leave the organization if they had a job offer with better pay. This suggests that most are happy with where they are, while a considerable portion does admit they would take the new offer. Very few are undecided on this matter.
+barplot(table(Typical_Employee_Survey_Data$Turn_Down_Job_Offer), main = "Job Acceptance for Higher Pay", xlab = "Likelihood", ylab = "Frequency", col = "blue")
+
+# The bar plot displays that most Typical Industries employees feel that the workplace relations at the company are "Very Good" or "Good". Almost none of them answered that they were very bad, which displays that the company has employees who like one another.
+barplot(table(Typical_Employee_Survey_Data$Work_Relations), main = "Workplace Relations", xlab = "Relations Quality", ylab = "Frequency", col = "blue")
+
+# Now 3 scatterplots will be plotted to display some relationships between the data
+
+# First, plotting age vs years worked will investigate if there is any correlation between how old someone is and how long they have worked at the company. There is a positive relationship between the two variables, with more young individuals (age 50 and below) making up those that have been with the company for a short time. Still, the majority of employees have not been at Typical Industries for more than 10-15 years.
+plot(Typical_Employee_Survey_Data$Age, Typical_Employee_Survey_Data$Years_Worked, 
+     main = "Age vs. Years Worked", 
+     xlab = "Age", 
+     ylab = "Years Worked", 
+     col = "blue")
+
+# Next, job satisfaction vs years worked can be plotted. For this to occur, job satisfaction must be converted back to a numeric so the number responses will be properly interpreted. As job satisfaction is factor data, the scatterplot is not as efficient as 2 numeric data types. But, it still displays that as the years worked increase, fewer people said they were 1 (Very Satisfied) with their job. Only 1 individual who has worked for more than 50 years is Very Satisfied.
+Typical_Employee_Survey_Data$Job_Satisfaction <- as.numeric(Typical_Employee_Survey_Data$Job_Satisfaction)
+
+plot(Typical_Employee_Survey_Data$Years_Worked, Typical_Employee_Survey_Data$Job_Satisfaction, 
+     main = "Job Satisfaction vs. Years Worked", 
+     xlab = "Years Worked", 
+     ylab = "Job Satisfaction", 
+     col = "green")
+
+# Finally, age vs promotion likelihood can be plotted. Again, promotion likelihood had to be converted back to a numeric. But, this still displays that as employee age increased, more felt increasingly pessimistic about their promotion likelihood. It is possible that younger individuals at Typical Industries feel more optimistic about their growth potential.
+Typical_Employee_Survey_Data$Promotion_Likelihood <- as.numeric(Typical_Employee_Survey_Data$Promotion_Likelihood)
+
+plot(Typical_Employee_Survey_Data$Age, Typical_Employee_Survey_Data$Promotion_Likelihood, 
+     main = "Age vs. Promotion Likelihood", 
+     xlab = "Age", 
+     ylab = "Promotion Likelihood", 
+     col = "red")
