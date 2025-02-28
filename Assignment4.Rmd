@@ -1,0 +1,271 @@
+---
+title: "Assignment #4: Running Forecasting Models on my Time Series"
+author: "Erica Wurster"
+date: "2025-02-27"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+# Load necessary libraries
+library(readxl)
+library(forecast)
+```
+
+## Introduction
+
+In this assignment, I will run various forecasting models on my time series, which includes the unemployment rates for women in the U.S. monthly from January 1948 to January 2025. I will analyze the outputs of each of the forecasting models. Additionally, I will plot my time series and the different forecasts on one chart using different colors. Finally, I will pick an accuracy measure to compare my models, and pick the best model based on this comparison. 
+
+## Importing the Time Series Data
+
+I must first import the time series data, using the read_excel() function as it is an Excel spreadsheet. I have already installed the readxl package in this markdown file, and loaded it with the library function. 
+
+```{r importing_data}
+# Import Excel File
+Women_Unemployment_Rates <- read_excel("/Users/user/Desktop/time series/WomenUnemploymentRate.xlsx")
+```
+
+## Using the Head Function
+
+The head() function will allow me to test if the file was properly imported by displaying the first few rows of the data.
+
+```{r string_function}
+head(Women_Unemployment_Rates)
+```
+
+## Creating the Time Series Object
+
+For some reason, when I attempt to use forecasting models on my Women_Unemployment_Rates dataset, I get an error stating that "Multivariate time series detected." In order for the models to work properly I need to convert my data to a time series object. This is a solution for my error that I found online.
+
+```{r object}
+# Extract the unemployment rate (second column)
+unemployment_rate <- Women_Unemployment_Rates$LNS14000002
+
+# Create the time series object (monthly data starting from January 1948)
+unemployment_ts <- ts(unemployment_rate, start = c(1948, 1), frequency = 12)
+
+# Check the time series object
+print(unemployment_ts)
+```
+
+## Exploratory Analysis: Plotting the Time Series
+I will begin with an exploratory analysis where I plot my time series, run the ACF (autocorrelation function), and perform decomposition.
+
+```{r plot}
+plot(unemployment_ts)
+```
+
+The time series displays the time (monthly) of the observations from 1948 to 2025 on the X-axis. The corresponding unemployment rates, in percentages and not decimals, are displayed on the Y-axis.
+
+Trend: There is no observable trend across all the years of the data. However, if looking at different snapshots of a few years at a time, there are noticeable periods of increase and decline, likely linked to economic cycles in the U.S. For example, from 2008 to 2010, the unemployment rate of women climbed continuously. This is highly correlated with the 2008 recession. Following this, from 2010 to 2020, there was a steady decline in the unemployment rate, representing the country's recovery.
+
+Seasonality: Despite the many fluctuations in the data, the actual seasonality seems weak. There are few repeating patterns at regular intervals in the unemployment rate.
+
+Cyclical Patterns: The time series can be described much more accurately as cyclical. It shows periods of high volatility, with continuous increases and decreases in unemployment rates. More pronounced fluctuations may be  This makes sense as unemployment is often describes as cyclical, or occurring due to recessions and the economy's dips.
+
+Irregular Variations: There are many short-term fluctuations that do not follow a clear trend or seasonal pattern, which may have been caused by certain economic events. To avoid this, considering how many years a trend lasts will allow us to make the distinction between an irregular variation or a cyclical variation, with a shorter term trend likely being irregular. One notable economic event is Covid-19, which clearly impacted the unemployment rate in the time series, making it reach a sharp peak. This change is not aligned with the regular cyclical variation that can be observed. 
+
+## Exploratory Analysis: Running the ACF
+
+I will now run the autocorrelation function (ACF) to better look for trend and seasonality in my data. As my data spans across 1948-2025, and the data has many fluctuations, the lag that I choose for the ACF will have a significant impact on what I see. As I result, I will use several different lag values, but I will focus mainly on the data since 2015.
+
+I will first look at the ACF for 60 lags (the past 5 years), looking at the data since 2020.
+
+```{r acf5}
+acf(unemployment_ts, lag=60)
+```
+
+The ACF displays a continuous decrease between years 0-5. This shows that there was a downward trend in the unemployment rates since 2020, which aligns with the sharp peak that occurred during the Covid-19 pandemic and the gradual decline that has occurred after. It is also notable that all the ACF values fall outside the confidence interval (represented by the blue dotted lines). So, the unemployment rates today are related to the rates in the past 5 years, especially recent months.
+
+I will now look at the ACF for 120 lags (the past 10 years), looking at the data since 2015.
+
+```{r acf10}
+acf(unemployment_ts, lag=120)
+```
+
+This ACF also shows a continuous decrease, so there is also an overall downward trend in the unemployment rate (that in 2015 is higher than that in 2025). So, the unemployment rates today are related to the rates in the past 7 years only, anything beyond that is statistically insignificant. 
+
+Finally, I will display the ACF for the maximum number of lags, 925.
+
+```{r acfmax}
+acf(unemployment_ts, lag=925)
+```
+
+Following year 10 on this ACF, the autocorrelation factors become negative for many years. This suggests that the unemployment rates today are impacted very little by values prior to 2015. They do become positive again after 600 lags, suggesting that rates now may be more in line with trends from 1975 and before. But, I know that I should pay attention to recent years when forecasting, not the entire picture, for best results.
+
+## Exploratory Analysis: Performing Decomposition
+I will finally perform decomposition with the stl() function, which will break it down into 4 categories: data, seasonal, trend, and remainder.
+
+```{r decomp}
+# Decompose the time series using stl()
+stl_decomp <- stl(unemployment_ts, s.window = "periodic")
+
+# Plot the decomposition
+plot(stl_decomp)
+```
+
+The different categories can be interpreted below.
+
+Data: Displays the observed values of my time series.
+
+Seasonal: There is a constant fluctuation from -0.05 to 0.05 throughout the time series. This suggests that there is virtually no seasonal trend, which I already have picked up on.
+
+Trend: This represents the long-term movement of the time series, ignoring seasonal effects that the system picks up on. As a whole, this focuses more on the actual trend occurring in the time series at certain points, and not minor events. The peaks and dips can be used to see how much the unemployment rate correlates to the state of the economy. 
+
+Remainder: This displays any noise that the system picks up. While relatively stable, a huge peak occurs around 2020, when the pandemic occurred. This is the most significant noise in the time series and should be ignored for the most accurate forecasting. 
+
+## Forecasting
+Throughout my exploratory analysis, I realized that there were unpredictable peaks throughout the data, and that the year 2020 was a major outlier. I know that more robust forecasting models, like exponential smoothing and Holt-Winters, may be more appropriate. However, Holt-Winters is likely not suitable as there is no seasonality. I hypothesize that an exponential smoothing model will be best. A moving average for a more recent time period would also be useful. 
+
+## Taking the Mean of All Available History
+First, I will use the average of all the available history to forecast. I have decided I will forecast 12 periods ahead (1 year). But, for a simple model such as this, only a straight line (the same values) will be the output, no matter how many periods I forecast.
+
+```{r mean_forecast}
+mean_forecast <- meanf(unemployment_ts,12)
+plot(mean_forecast)
+```
+
+The forecast predicts that the next mean point for the unemployment rate is 6%. This is highly unrealistic, as it is a big jump from January's value. The confidence interval (the grey range) covers a more realistic range, but overall it is skewed higher than it likely would be in reality. The high peak that occurred in 2020 is probably to blame for this. As a whole, this is not the best forecasting model for this time series as the unemployment rates from more than 20 years ago likely have little sway in the current unemployment rates.
+
+## Naive Forecasting Model
+Here I will use the most simple forecasting model, the naive model. It will predict that the next value is equal to the most recent unemployment rate for women (in January 2025). I have decided I will forecast 12 periods ahead (1 year). But, for a simple model such as this, only a straight line (the same values) will be the output, no matter how many periods I forecast.
+
+```{r naive_forecast}
+naive_forecast <- naive(unemployment_ts,12)
+plot(naive_forecast)
+```
+
+This forecast predicted that the next value would be equal to the unemployment rate from January 2025. This is highly unrealistic, as there are frequent increases and decreases in the rates. The confidence interval (the grey range), however, is a more accurate prediction of what is to happen, as long as no significant economic event occurs.
+
+## Random Walk Forecasting Model
+Next, I will use the random walk model, which predicts the next point as a random deviation from the most recent point. I have decided I will forecast 12 periods ahead (1 year). But, for a simple model such as this, only a straight line (the same values) will be the output, no matter how many periods I forecast.
+
+I will first plot a random walk forecast without drift. So, it will forecast the last observed value plus/minus a random fluctuation.
+```{r randomwalk_forecast}
+rwf_forecast <- rwf(unemployment_ts,12)
+plot(rwf_forecast)
+```
+
+The concept of this forecast suits this time series better than the naive forecast, but its actual output is not much different. This is because the random deviation that was added in did not cause a huge fluctuation from the most recent point. But, this type of forecast is still more realistic than the naive as the next unemployment will have some level of deviation from the last.
+
+
+Next, I will plot a random walk forecast with drift. This considers trend, with the drift being the average historical change in the time series.
+
+```{r drift_forecast}
+rwf_forecast_drift <- rwf(unemployment_ts,12, drift=TRUE)
+plot(rwf_forecast_drift)
+```
+
+The output looks extremely similar to the forecast without drift, meaning that the historical trend component was not very impactful. This is likely because the unemployment rate in January 1948 is very similar to that of January 2025.
+
+## Seasonal Naive Forecasting Model
+The seasonal naive forecast assumes that the value of the unemployment rate in the next month (ex. February 2025) will be equal to that of the previous year (ex. February 2024). Unlike the previous forecasts, this will produce a different value for each of the next 12 periods.
+
+```{r sn_forecast}
+snaive_forecast <- snaive(unemployment_ts,12)
+plot(snaive_forecast)
+```
+
+This forecast for the next 12 months assumes that the trends observed in the prior year will be the exact same this year. As there is virtually no seasonality in the data, these predictions are highly unrealistic and this model is simply not a good fit for this time series.
+
+## Moving Averages Forecasting Model
+The moving average model will predict unemployment rates using an average of a fixed number of observations. This will help remove-short term irregular variations and generally smooth out peaks. This is more of a smoothing model than one that is used to predict the future unemployment rates.
+
+I will first plot the moving average forecast using the past 6 periods (half a year).
+
+```{r ma6_forecast}
+MA6_forecast <- ma(unemployment_ts, order=6)
+plot(MA6_forecast)
+```
+
+This 6-month moving average smooths out minor variations in the unemployment rate, making the general direction of the time series more clear. It still captures the cyclical trends in the data, but peaks such as in 2020 are less pronounced. 
+
+Next, I will plot the moving average forecast using the past 12 periods (1 year).
+
+```{r ma12_forecast}
+MA12_forecast <- ma(unemployment_ts, order=12)
+plot(MA12_forecast)
+```
+
+Compared to the 6-month moving average, this 12-month moving average smooths out the short-term irregularities even more. However, it makes the cyclical trends much more pronounced. Notably, the unemployment rates from 1975-1985 display a higher peak than the actual time series. However, it is important to note that the rates themselves are not actually higher, but the relative peak increased in height as other fluctuations such as that in 2020 was minimized.
+
+## Holt-Winters Forecasting Model
+The Holt-Winters method accounts for trend, seasonality, and level in the data. As my previous exploratory analysis showed very weak seasonality, this may not be the best choice.
+
+```{r hw_forecast}
+HW_forecast <- HoltWinters(unemployment_ts)
+plot(HW_forecast)
+```
+
+Surprisingly, the Holt-Winters forecast (represented with the red line), follows the actual time series extremely closely. There are possible explanations for this. Mainly, despite there being no seasonal factor, level and trend are still being captured due to the long-term economic cycles present in the data. Also, the model may be picking up on the economic cycles, even if they don't occur every X number of years. This has been the most effective model so far.
+
+## Exponential Smoothing Forecasting Model
+The exponential smoothing model assigns exponentially decreasing weights to past observations. Given my findings that unemployment trends are cyclical with no strong seasonality, this model may be the best choice. I am predicting for the next 12 months, but only 1 straight line will be displayed.
+
+```{r es_forecast}
+# Create ets forecast
+ets_forecast <- ets(unemployment_ts)
+# Forecast a line that extends the time series based on this
+forecast_ets_1 <- forecast(ets_forecast, h = 12)
+plot(forecast_ets_1)
+```
+
+The produced forecast displays a result similar to other simple models. It does predict that the future unemployment rates will be lower than that in January 2025. This is not unrealistic, considering the frequent cyclical trends that occur. The confidence interval also provides for the possibility that the rates may instead become higher. 
+
+## Plot the Time Series and All Different Model Forecasts in One Chart
+
+```{r one_chart}
+# Plot the original time series without the xlim and ylim arguments
+plot(unemployment_ts, col="black", 
+     main="Unemployment Rates for Women - Forecasts", xlab="Year", ylab="Unemployment Rate (%)")
+
+# Add the forecast lines for each model
+lines(mean_forecast$mean, col="red")
+lines(naive_forecast$mean, col="orange")
+lines(rwf_forecast$mean, col="yellow")
+lines(rwf_forecast_drift$mean, col="green")
+lines(snaive_forecast$mean, col="blue")
+lines(MA6_forecast, col="purple")
+lines(MA12_forecast, col="pink")
+lines(HW_forecast$fitted[1:length(unemployment_ts)], col="brown")
+lines(forecast_ets_1$mean, col="cyan")
+```
+
+With how many forecasts and colors are plotted on one chart, it is difficult to decide just from visuals which is the best. Also, the moving average forecasts as well the Holt-Winters and Exponential Smoothing seem to be overlapping one another. It is not that they are all similar or equal, but they follow the same cyclical trends and look extremely similar over the zoomed out plot. The visual simply serves as an interesting depiction of all the models, but is not useful for deciding which is the best one. 
+
+## Picking an Accuracy Measure to Compare the Forecast Models
+To finally conclude which is the best forecasting model for this time series, I will be comparing the Mean Absolute Percentage Error (MAPE) of each. This is the average absolute percentage error between the forecast and the actual value. The accuracy function displays a variety of metrics for each forecast, so I will perform that and extract MAPE for each.
+
+```{r MAPE}
+accuracy(mean_forecast)
+accuracy(naive_forecast)
+accuracy(rwf_forecast)
+accuracy(rwf_forecast_drift)
+accuracy(snaive_forecast)
+accuracy(forecast(MA6_forecast, h=12))
+accuracy(forecast(MA12_forecast, h=12))
+accuracy(forecast(HW_forecast, h=12))
+accuracy(forecast_ets_1)
+```
+
+Summary of the different MAPE values:
+
+Mean of All History: 22.9121. On average, the forecasts made by the model are off by about 22.91% from the actual values.
+
+Naive: 3.444473. On average, the forecasts made by the model are off by about 3.44% from the actual values.
+
+Random Walk: 3.444473. On average, the forecasts made by the model are off by about 3.44% from the actual values.
+
+Random Walk with Drift: 3.447783. On average, the forecasts made by the model are off by about 3.44% from the actual values.
+
+Seasonal Naive: 14.09329. On average, the forecasts made by the model are off by about 14.09% from the actual values.
+
+6-month Moving Average: 0.5444284.On average, the forecasts made by the model are off by about 0.54% from the actual values.
+
+12-month Moving Average: 0.3127639. On average, the forecasts made by the model are off by about 0.31% from the actual values.
+
+Holt-Winters: 4.17701. On average, the forecasts made by the model are off by about 4.18% from the actual values.
+
+Exponential Smoothing: 3.442793. On average, the forecasts made by the model are off by about % from the actual values.
+
+## What is the best forecasting model for the unemployment rates of women in the U.S.?
+Based on the MAPE metric, the 12-month moving average produced the least deviation between the forecast and actual values. This is suitable as the ACF was highest for the most recent months, meaning the most recent unemployment rates have the highest impact on the future ones.
