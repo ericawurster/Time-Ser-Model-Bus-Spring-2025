@@ -1,0 +1,95 @@
+---
+title: "MockExam1"
+author: "Erica Wurster"
+date: "2025-03-03"
+output: html_document
+---
+
+## Practice Midterm 1
+
+## Plot and Inference
+```{r}
+# Import the data
+library(fpp2)
+ts <- arrivals[,4]
+
+# Show the time series plot
+plot(ts, main="International Arrivals to Australia from the US", xlab="Time (Quarterly)", ylab="Arrivals (thousands)")
+
+# Observations: The time series displays the international arrivals (in thousands) to Australia from the US from 1981Q1 to 2012Q3. There are many fluctuations over the years, but an overall upward trend in the data, showing that tourism has seen a steady increase. Seasonality may be present as suggested by the up and down fluctuations. Additionally, there are some notable peaks in the late 1980s, in about 2002, and 2010, suggesting there may be some events that occurred which increased tourism.
+
+# Plot the ACF
+acf(ts)
+# The ACF displays that as time series points get more distant from the next date, they have less of a correlation to the next number of arrivals from the US. But, all points on this ACF are still statistically significant, so all the recent points are important when forecasting.
+```
+
+## Central Tendency
+
+```{r}
+# What are the min, max, mean, mean, 1st and 3rd Quartile values of this time series?
+summary(ts)
+# Show the box plot
+boxplot(ts, ylab="Arrivals (Thousands)")
+# Observations: The minimum # of arrivals from the US in one quarter is 23.72 thousand. 25% of the quarters have a number of arrivals that falls between 23.72 and 63.95 thousand. The median of 85.88 is greater than the mean of 84.85, so the data is skewed to the left (very slightly). There are more # of arrivals in quarters that are on the lower end of the data. 25% of the data falls between the 3rd quartile 108.98 and the maximum 136.09. The box plot also displays the slight skew that exists in the data, as the distance from the minimum and 1st quartile is larger than that between the 3rd quartile and maximum.
+```
+
+## Decomposition
+```{r}
+# Plot the decomposition of the time series
+decomp_ts <- decompose(ts)
+plot(decomp_ts)
+# Is the time series seasonal? The seasonal component of the time series displays a constant fluctuation between -5 and 5, displaying a strong seasonal impact.
+# Is the decomposition or multiplicative? It is additive.
+# What are the seasonal quarterly indices? The seasonal quarterly indices range from -5 to 5. So, at -5 the time series is experiencing values 5 units lower than the average, and at 5 it is experiencing values 5 units higher.
+# High and low quarters: The number of arrivals is typically greater in Q1 and Q4 (the highest in Q4), and lowest in Q2 and Q3 (the lowest in Q3).
+# What is the reason? The US and Australia are on different sides of the equator, so their seasons are opposites. More Americans arrive in Australia when the US has winter and Australia has summer (Q1 and Q4). Less Americans arrive in Australia when the US has summer and Australia has winter. People would rather travel to a warmer climate on holiday.
+# Plot the seasonally adjusted time series
+plot(seasadj(decomp_ts))
+lines(ts, col="red")
+# Does seasonality have big fluctuations in the values of the time series? Yes. The seasonally adjusted time series have much more evened out peaks and lows, while the actuals have a much larger quarterly fluctuations. 
+```
+
+
+## Naive Method
+```{r}
+# Output for 2 years
+naive <- naive(ts,8)
+naive_forecast <- forecast(naive)
+plot(naive_forecast)
+
+# Perform residual analysis
+
+# First, a plot of residuals
+residuals_naive <- naive_forecast$residuals
+plot(residuals_naive)
+# Indications: The plot displays a constant fluctuation of the residuals, ranging almost a -30 difference to a positive 40 difference. In the beginning (years 1980 to 1985), the residuals are not as greater, but they have been consistently higher since then. From this view, the residuals seem to be more often positive than negative, suggesting that the naive models tends to overpredict rather than underpredict. Overall, this plot displays a significant amount of residuals, suggesting that the naive model is not the best choice for this time series.
+# A histogram plot of residuals
+hist(residuals_naive)
+# Indications:
+# Plot of fitted values vs. residuals
+naive_fitted <- fitted(naive_forecast)
+plot(as.numeric(naive_fitted), residuals_naive)
+# Indications: The plot displays a weak negative correlation between the fitted values and the residuals. So, as the predicted value increases, the residual for that value tends to decrease. The model tends to overpredict when it comes to quarters with a lower amount of arrivals.
+# Plot of actual values vs. residuals
+plot(as.numeric(ts), residuals_naive)
+# Indications: The plot displayed a weak positive correlation between the actual time series values and the residuals. So, as the actual value is greater, the residual associated with it tends to be as well. So, for quarters with a higher actual number of arrivals, the naive forecasts fitted values are overpredicted.
+# ACF plot of residuals
+acf(na.omit(residuals_naive))
+# Indications:The ACF plot displays that positive autocorrelation occurs every lag, while a negative autocorrelation occurs every half lag. The naive model does not predict the seasonality of the time series well, and a seasonally adjusted model is likely more appropriate.
+
+# Print the five measures of accuracy for this forecasting technique
+accuracy(naive_forecast)
+
+# Forecast time series value for next year. Show table and plot
+naiveyear <- naive(ts,4)
+nf_year <- forecast(naiveyear)
+nf_year
+plot(nf_year)
+
+# Summarize the forecasting technique:
+# How good is the accuracy: Based on the MAPE value of 11.83 the model tends to predict a value 11.83% away from the actual value. The accuracy is good, but it could be better. There is much greater accuracy when using confidence intervals.
+# What does it predict the time series value will be in one year: The forecasting model predicts that in 4 quarters, in 2013 Q3, there is a 95% certainty that the # of arrivals to Australia from the US will be between 57.49030 and 155.5897 thousand. The point forecast is 106.54 thousand.
+
+
+```
+
