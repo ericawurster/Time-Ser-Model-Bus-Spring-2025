@@ -1,0 +1,120 @@
+---
+title: "MockExam2"
+author: "Erica Wurster"
+date: "2025-03-06"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(fpp2)
+```
+
+## Simple Moving Averages
+```{r}
+# Load necessary libraries
+library(fpp2)
+
+# Import the data
+ts <- arrivals[,4]
+
+# Plot the time series
+plot(ts, main="International Arrivals to Australia from the US", xlab="Time (Quarterly)", ylab="Arrivals (thousands)")
+
+# Compute moving averages
+ma3 <- ma(ts, order=3)
+ma6 <- ma(ts, order=6)
+ma9 <- ma(ts, order=9)
+
+# Add moving averages to the plot
+lines(ma3, col="red", lwd=2)
+lines(ma6, col="blue", lwd=2)
+lines(ma9, col="green", lwd=2)
+# As the moving average order increases, the forecast becomes smoother less impacted by the sharp peaks and valleys of the forecast. A higher order will be impacted less by the seasonality of the data.
+
+# Bonus: Forecast for the next 12 months. MA3 is used as to not smooth out seasonality as best as possible. 
+forecast_ma <- forecast(ma3, h=12)
+plot(forecast_ma)
+```
+
+## Simple Smoothing
+```{r}
+# Perform simple exponential smoothing
+ses_model <- ses(ts, h=12)
+plot(ses_model)
+
+# Extract model parameters
+# Alpha: Measures how much weight is given to recent observations. About 35.8% of the forecasting weight is givn to the most recent observation.
+ses_model$model$par["alpha"]
+# Initial State: The estimated starting value of the time series.
+ses_model$model$states[1, ]
+# Sigma: Measure's the model's error variance; lower values indicate a better fit. The sigma level is very high, suggesting this model is not a good fit.
+ses_model$model$sigma2
+
+# Residual Analysis
+residuals_ses <- residuals(ses_model)
+# Plot of residuals: This indcates that the residuals constantly fluctuate around 0, there is no real pattern.
+plot(residuals_ses)
+# Histogram of Residuals: A greater amount of residuals are negative, the model tends to under predict rather than over predict.
+hist(residuals_ses)
+# Plot of fitted values vs residuals: The values are scattered around 0 with no clear pattern 
+plot(as.numeric(fitted(ses_model)), residuals_ses)
+# Plot of actuals vs residuals: Displays a positive correlation, suggesting that as the time series value increases, the residual also increases. The model may be consistently overpredicting the highest seasons.
+plot(as.numeric(ts), residuals_ses)
+# ACF of residuals: A high ACF occurs every other season, so the seasons with high visitors are driving the forecast up.
+acf(na.omit(residuals_ses))
+
+# Accuracy Measures
+accuracy(ses_model)
+
+# Forecast for Next Year
+ses_forecast <- forecast(ses_model, h=4)
+ses_forecast
+plot(ses_forecast)
+```
+Summarize the forecasting technique:The high sigma value indicates that this model does not fit the forecast well. It predicts with 95% confidence that the forecast in one year will be between 129.0223 and 86.66809 thousand, with the point forecast being 112.2773 thousand. It tends to overpredict the seasons with lower visitors, a more seasonally adjusted forecast may be more suitable.
+## Holt-Winters
+```{r}
+# Perform Holt-Winters forecasting
+hw_model <- hw(ts, seasonal="additive", h=12)
+plot(hw_model)
+
+# Observations
+alpha_hw <- hw_model$model$par["alpha"]
+beta_hw <- hw_model$model$par["beta"]
+gamma_hw <- hw_model$model$par["gamma"]
+
+# Residual Analysis
+residuals_hw <- residuals(hw_model)
+plot(residuals_hw)
+hist(residuals_hw)
+plot(fitted(hw_model), residuals_hw)
+plot(ts, residuals_hw)
+acf(na.omit(residuals_hw))
+
+# Accuracy Measures
+accuracy(hw_model)
+
+# Forecast for Next Year
+hw_forecast <- forecast(hw_model, h=4)
+hw_forecast
+plot(hw_forecast)
+```
+
+## Accuracy Summary
+```{r}
+accuracy_table <- rbind(
+  accuracy(ses_model),
+  accuracy(hw_model)
+)
+rownames(accuracy_table) <- c("Simple Smoothing", "Holt-Winters")
+accuracy_table
+```
+
+## Conclusion
+Based on the forecasts, international arrivals are expected to increase slightly over the next year.
+
+Over the next two years, a seasonal pattern suggests fluctuations with an upward trend.
+
+Holt-Winters performed best in capturing seasonality, making it the preferred method for this dataset.
+
+Simple exponential smoothing is useful for short-term trends but does not capture seasonality well.
