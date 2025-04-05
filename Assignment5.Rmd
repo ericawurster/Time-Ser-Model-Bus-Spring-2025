@@ -1,0 +1,98 @@
+---
+title: "Assignment5"
+output: html_document
+date: "2025-04-05"
+---
+
+## Introduction
+
+In this assignment, I will perform ARIMA on my time series. I will explain the output I receive and run a residual analysis. Then, I will perform and plot the forecast for the next five periods and show the accuracy of the model.
+
+```{r setup, include=FALSE}
+library(fpp2)
+library(forecast)
+library(readxl)
+```
+
+# Import Time Series
+```{r}
+# Import Excel File
+Women_Unemployment_Rates <- read_excel("C:/Users/ejw138/Downloads/WomenUnemploymentRate.xlsx")
+
+# Extract the unemployment rate (second column)
+unemployment_rate <- Women_Unemployment_Rates$LNS14000002
+
+# Create the time series object (monthly data starting from January 1948)
+unemployment_ts <- ts(unemployment_rate, start = c(1948, 1), frequency = 12)
+
+# Check the time series object
+print(unemployment_ts)
+```
+
+# Before performing ARIMA
+```{r}
+# Plot the time series, ACF, and PACF
+tsdisplay(unemployment_ts)
+# The plot of the time series reminds me that the value in 2020 is a major outlier that may mess with my time series output. I will consider this later in a windows function. Both the ACF and PACF consider 36 lags (3 years of data). The ACF values slowly decrease over time, but they all remain outside of the lines of significance, there is some trend in the data over this time period (no stationarity). The PACF is very high at lag 1 and drops significantly afterwards, so only the most recent data point is relevant.  
+# Check for Stationarity
+ndiffs(unemployment_ts)
+unemployment_ts_diff1 <- diff(unemployment_ts, differences=1)
+tsdisplay(unemployment_ts_diff1)
+# The plot of the differenced time series has much less fluctuation (besides 2020). The ACF and PACF look very similar, and most of the factors are negative and statistically insignificant. The time series is likely now stationary.
+```
+
+# Perform ARIMA
+```{r}
+arima_model <- auto.arima(unemployment_ts, trace=TRUE, stepwise=FALSE)
+summary(arima_model)
+# The best model that was found for the ARIMA was ARIMA(3,1,2). The AutoRegressive order is 3, meaning the model is using the past three values of the series to predict the current value. The Differencing order of 1 represents that we differenced the time series once to make it stationary. Finally, the Moving Average order is 2, meaning the model uses the past two forecast residuals to predict the current value.The coefficients display that all three AR coefficients have a positive effect on the current value of the time series, while the two MA coefficients have a negative effect. Among, the other values, the sigma^2 is relatively good, but not extremely low. Also, the MAPE of 3.5954% displays the average error of the forecast from the actuals, showing the ARIMA is a pretty good fit in this case. 
+```
+
+# Residual Analysis
+```{r}
+# ACF of residuals
+Acf(residuals(arima_model))
+#Explanation: None of the autocorrelation factors fall outside of the significance boundds, so all the residuals in the 30 lag period are likely random noise. The model is capturing all important patterns.
+# Box-Ljung test
+Box.test(residuals(arima_model), lag = 20, type = "Ljung")
+# The p-value of 0.9994, which is greater than the alpha value 0.05, suggests that there is no significant autocorrelation in the residuals. The model is doing a good job capturing the data dependencies.
+# Plot of residuals
+plot.ts(residuals(arima_model))
+# All of the residuals appear to be randomly scattered around 0, except for 2020 which has an extremely high residual value. Also, the the peaks and valleys appear to get smaller over time, so the model is better at predicting more recent values.
+# Histogram of residuals
+hist(residuals(arima_model))
+# Most of the residuals are centered around 0, within -2 and 2. There is one near 12, likely from 2020. The histogram plot is skewed slightly to to the left (more negatives), meaning the model tends to overpredict the values.
+```
+
+# Forecast and Accuracy of Model
+```{r}
+# Forecast for the next 5 periods (months)
+forecast_arima <- forecast(arima_model, h = 5)
+
+# Forecast values
+forecast_arima
+
+# Plot the forecast
+plot(forecast_arima)
+
+# Check the accuracy of the forecast
+accuracy(forecast_arima)
+
+#Explanation: The model predicts that at the end of the 5 periods (June 2025), there is a 95% chance that the unemployment rate for women in the US will be between 2.319% and 6.104%. To evaluate accuracy, I will look at the Mean Percentage Error (MPE) value to see if there is bias in the forecast. The average percentage error is -0.3234%, so the forecast is overpredcting. But, this value is extremely close to zero, so it is still quite accurate.
+```
+
+# Is a windows function more accurate?
+```{r}
+# Windows function starting after 2021
+unemployment_window <- window(unemployment_ts, start = c(2021, 1))
+# Perform the same steps with the windowed data
+unemployment_window_diff1 <- diff(unemployment_window, differences = 1)
+tsdisplay(unemployment_window_diff1)
+# Fit the ARIMA model
+arima_window <- auto.arima(unemployment_window_diff1)
+# Forecast next 5 periods
+forecast_arima_window <- forecast(arima_window, h = 5)
+# Check the accuracy
+accuracy(forecast_arima_window)
+# The MAE for the original forecast is 0.2125, while for the windows function it is 0.1386. The predictions are more accurate but not by much. 
+```
